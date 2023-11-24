@@ -1,0 +1,16 @@
+
+.article-box {
+    border: 1px solid #ccc;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+
+.article-details {
+    margin-top: 10px;
+}
+
+
+ul {
+    list-style-type: none;
+}
