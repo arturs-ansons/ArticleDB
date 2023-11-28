@@ -25,101 +25,142 @@ class DatabaseService
         $user = $_ENV['DB_USER'] ?? null;
         $password = $_ENV['DB_PASSWORD'] ?? null;
 
-        $this->db = new PDO($dsn, $user, $password);
-        $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        try {
+            $this->db = new PDO($dsn, $user, $password);
+            $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        } catch (\PDOException $e) {
+            error_log('Database Error: ' . $e->getMessage());
+            exit("Database connection error");
+        }
     }
 
-    public function createArticle(array $articleData): void
+    public function createArticle(Article $articleData): void
     {
-        $statement = $this->db->prepare("
-        INSERT INTO articles (title, image, link) 
-        VALUES (:title, :image, :link)");
+        try {
+            $statement = $this->db->prepare("
+            INSERT INTO articles (title, image, link) 
+            VALUES (:title, :image, :link)");
 
-        $statement->execute([
-            'title' => $articleData['title'],
-            'image' => $articleData['image'],
-            'link' => $articleData['link']
-        ]);
+            $statement->execute([
+                'title' => $articleData->getTitle(),
+                'image' => $articleData->getImage(),
+                'link' => $articleData->getLink()
+            ]);
+        } catch (\PDOException $e) {
+            error_log('Database Error: ' . $e->getMessage());
+        }
     }
 
     public function deleteArticle(int $articleId): void
     {
-        $statement = $this->db->prepare("
-        DELETE FROM articles
-        WHERE id = :id");
+        try {
+            $statement = $this->db->prepare("
+            DELETE FROM articles
+            WHERE id = :id");
 
-        $statement->execute(['id' => $articleId]);
+            $statement->execute(['id' => $articleId]);
+        } catch (\PDOException $e) {
+            error_log('Database Error: ' . $e->getMessage());
+        }
     }
 
-    public function updateArticleById(int $articleId, ?string $newTitle): ?Article
+    public function updateArticleById(int $articleId, ?string $newTitle): bool
     {
-        $statement = $this->db->prepare("
-        UPDATE articles 
-        SET title = :title 
-        WHERE id = :id
-    ");
-        $statement->execute([
-            'id' => $articleId,
-            'title' => $newTitle]
-        );
+        try {
+            $statement = $this->db->prepare("
+            UPDATE articles 
+            SET title = :title 
+            WHERE id = :id
+        ");
 
-        $updatedStatement = $this->db->prepare("
-        SELECT * FROM articles 
-        WHERE id = :id");
-        $updatedStatement->execute(['id' => $articleId]);
+            return $statement->execute([
+                'id' => $articleId,
+                'title' => $newTitle
+            ]);
+        } catch (\PDOException $e) {
+            error_log('Database Error: ' . $e->getMessage());
+            return false;
+        }
+    }
 
-        $articleData = $updatedStatement->fetch(PDO::FETCH_ASSOC);
+    public function updateLink(int $articleId, ?string $newTitle): bool
+    {
+        $newLink = $this->generateLink($newTitle);
 
-        return new Article(
-            (int)$articleData['id'],
-            $articleData['title'],
-            $articleData['image'],
-            $articleData['date'],
-            $articleData['link']
-        );
+        try {
+            $statement = $this->db->prepare("
+            UPDATE articles 
+            SET link = :link 
+            WHERE id = :id
+        ");
+
+            return $statement->execute([
+                'id' => $articleId,
+                'link' => $newLink,
+            ]);
+        } catch (\PDOException $e) {
+            error_log('Database Error: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    private function generateLink(string $title): string
+    {
+        return 'http://localhost:8000/article/' . str_replace(' ', '-', $title);
     }
 
     public function getAllArticles(): ArticleCollection
     {
-        $statement = $this->db->query("SELECT * FROM articles");
-        $articlesData = $statement->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $statement = $this->db->query("SELECT * FROM articles");
+            $articlesData = $statement->fetchAll(PDO::FETCH_ASSOC);
 
-        $allArticles = new ArticleCollection();
+            $allArticles = new ArticleCollection();
 
-        foreach ($articlesData as $articleData) {
-            $article = new Article(
+            foreach ($articlesData as $articleData) {
+                $article = new Article(
+                    (int)$articleData['id'],
+                    $articleData['title'],
+                    $articleData['image'],
+                    $articleData['date'],
+                    $articleData['link']
+                );
+
+                $allArticles->add($article);
+            }
+
+            return $allArticles;
+        } catch (\PDOException $e) {
+            error_log('Database Error: ' . $e->getMessage());
+            return new ArticleCollection();
+        }
+    }
+
+    public function getArticleByTitle(string $title): ?Article
+    {
+        try {
+            $statement = $this->db->prepare("
+            SELECT * FROM articles 
+            WHERE title = :title");
+            $statement->execute(['title' => $title]);
+
+            $articleData = $statement->fetch(PDO::FETCH_ASSOC);
+
+            if (!$articleData) {
+                return null;
+            }
+
+            return new Article(
                 (int)$articleData['id'],
                 $articleData['title'],
                 $articleData['image'],
                 $articleData['date'],
                 $articleData['link']
             );
-
-            $allArticles->add($article);
-        }
-
-        return $allArticles;
-    }
-    public function getArticleById(int $articleId): ?Article
-    {
-        $statement = $this->db->prepare("
-        SELECT * FROM articles 
-        WHERE id = :id");
-        $statement->execute(['id' => $articleId]);
-
-        $articleData = $statement->fetch(PDO::FETCH_ASSOC);
-
-        if (!$articleData) {
+        } catch (\PDOException $e) {
+            error_log('Database Error: ' . $e->getMessage());
             return null;
         }
-
-        return new Article(
-            (int)$articleData['id'],
-            $articleData['title'],
-            $articleData['image'],
-            $articleData['date'],
-            $articleData['link']
-        );
     }
 
     public function getTwig(): Environment

@@ -8,6 +8,7 @@ use FastRoute\Dispatcher;
 use FastRoute\RouteCollector;
 use Carbon\Carbon;
 use function FastRoute\simpleDispatcher;
+session_start();
 
 class Routing
 {
@@ -16,21 +17,17 @@ class Routing
         $dbService = new DatabaseService();
         $twig = $dbService->getTwig();
 
-        $currentTime = Carbon::now('Europe/Riga')->format('Y-m-d | H:i');
-        $twig->addGlobal('globalTime', $currentTime);
+        //$currentTime = Carbon::now('Europe/Riga')->format('Y-m-d | H:i');
+        //$twig->addGlobal('globalTime', $currentTime);
 
         $controller = new ArticlesController($dbService, new ArticlesView($twig));
-
         $dispatcher = simpleDispatcher(function (RouteCollector $r) use ($controller) {
             $r->addRoute('GET', '/', [$controller, 'index']);
             $r->addRoute('POST', '/insert', [$controller, 'insertArticle']);
-            $r->addRoute('GET', '/article/{id:\d+}', [$controller, 'viewArticle']);
+            $r->addRoute('GET', '/article/{title}', [$controller, 'viewArticle']);
             $r->addRoute('POST', '/article/{id:\d+}', [$controller, 'deleteArticle']);
             $r->addRoute('POST', '/update/{id:\d+}', [$controller, 'updateArticle']);
         });
-
-
-
 
         $httpMethod = $_SERVER['REQUEST_METHOD'];
         $uri = rawurldecode($_SERVER['REQUEST_URI']);
@@ -57,9 +54,7 @@ class Routing
                 echo $response;
 
                 break;
-
         }
-
     }
 }
 

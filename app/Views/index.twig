@@ -8,56 +8,17 @@
     <link rel="stylesheet" href="css/styles.css">
     <title>Article Viewer</title>
 </head>
-<style>
-
-    .article-list {
-        display: flex;
-        flex-wrap: wrap; /* Allow articles to wrap to the next line */
-        justify-content: space-around; /* Adjust as needed for spacing between articles */
-        list-style: none; /* Remove default list styling */
-        padding: 0; /* Remove default padding */
-    }
-
-    .article-box {
-        width: 500px; /* Adjust the width of each article box as needed */
-        margin: 20px;
-        border: 1px solid #ddd;
-        padding: 15px;
-        box-sizing: border-box;
-    }
-
-    .article-box img {
-        max-width: 100%;
-        height: auto;
-        margin-bottom: 10px; /* Add space between image and other content */
-    }
-
-    .article-box h4 {
-        text-align: center;
-        margin-bottom: 10px;
-    }
-
-    .article-box form {
-        text-align: center;
-    }
-
-    .article-box .form-group {
-        margin-bottom: 10px;
-    }
-
-</style>
 <body>
-
-<!-- Insert Form -->
 <div class="container mt-3">
     <div class="row justify-content-center">
 
-        <form method="POST" action="/insert" name="insertForm" class="form-inline">
-            <input type="hidden" name="formType" value="insert"> <!-- Add a hidden field to identify the form -->
+        <form method="POST" action="/insert" name="insertForm" class="form-inline" onsubmit="submitForm(event)">
+
+        <input type="hidden" name="formType" value="insert">
 
             <div class="form-group mx-sm-3 mb-2">
                 <label for="title" class="sr-only">Title</label>
-                <input type="text" class="form-control" id="title" name="title" placeholder="Title" required>
+                <input type="text" class="form-control" id="title" name="title" placeholder="Title" required oninput="updateLink()">
             </div>
 
             <div class="form-group mx-sm-3 mb-2">
@@ -67,14 +28,16 @@
 
             <div class="form-group mx-sm-3 mb-2">
                 <label for="link" class="sr-only">Link</label>
-                <input type="text" class="form-control" id="link" name="link" placeholder="Link" required>
+                <input type="text" class="form-control" id="link" name="link" value="" required readonly>
             </div>
 
             <button type="submit" class="btn btn-primary mb-2">Insert</button>
         </form>
+
     </div>
 </div>
 
+<div id="errorMessage" class="container mt-3"></div>
 
 <!-- Display Articles -->
 <div class="container mt-3">
@@ -84,16 +47,13 @@
                 <div class="article-box">
                     <br class="article-details">
                     <h4 style="text-align: center;">{{ article.getTitle() }}</h4>
-
-
                     <p>
                         <img style="display: block; margin: auto;" src="{{ article.getImage() }}" alt="Article Image" width="300" height="200">
-
                     </p>
-                        <p>
-                            <strong>Date Created:</strong> {{ article.getDateCreated() }}<br>
-                            <strong>Link:</strong> <a href="{{ article.getLink() }}" target="_blank">{{ article.getLink() }}</a>
-                        </p>
+                    <p>
+                        <strong>Date Created:</strong> {{ article.getDateCreated() }}<br>
+                        <strong>Link:</strong> <a href="{{ article.getLink() }}" target="_blank">{{ article.getLink() }}</a>
+                    </p>
 
                     <div class="d-flex justify-content-center">
                         <!-- Delete Form -->
@@ -109,12 +69,11 @@
                                 <label for="newTitle" class="sr-only">New Title</label>
                                 <input type="text" class="form-control" id="newTitle" name="newTitle" placeholder="New Title" required>
                             </div>
+
                             <button type="submit" name="action" value="update" class="btn btn-info">Update</button>
                         </form>
                     </div>
-
                 </div>
-                </li>
             {% endfor %}
         </ul>
     </div>
@@ -122,7 +81,47 @@
 
 
 
-<!-- Bootstrap JS, Popper.js, and jQuery -->
+<script>
+    function updateLink() {
+        var titleInput = document.getElementById("title");
+        var linkInput = document.getElementById("link");
+        linkInput.value = "http://localhost:8000/article/" + encodeURIComponent(titleInput.value);
+    }
+</script>
+
+<script>
+    function submitForm(event) {
+        event.preventDefault();
+
+        fetch('/insert', {
+            method: 'POST',
+            body: new FormData(document.forms.insertForm),
+        })
+            .then(response => {
+                if (response.ok) {
+                    // Reload the page after a successful response
+                    location.reload();
+                } else {
+                    // Handle error response
+                    return response.json();
+                }
+            })
+            .then(data => handleResponse(data))
+            .catch(error => console.error('Error:', error));
+    }
+
+    function handleResponse(data) {
+        const errorMessageElement = document.getElementById('errorMessage');
+
+        if (data.validationMessage) {
+            errorMessageElement.style.display = 'block';
+            errorMessageElement.innerHTML = data.validationMessage;
+        } else {
+            errorMessageElement.style.display = 'none';
+        }
+    }
+</script>
+
 <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>

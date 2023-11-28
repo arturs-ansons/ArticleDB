@@ -24,7 +24,9 @@ class ArticlesView
      */
     public function renderIndex(ArticleCollection $allArticles): string
     {
-        return $this->twig->render('index.twig', ['allArticles' => $allArticles]);
+        return $this->twig->render('index.twig', [
+            'allArticles' => $allArticles
+        ]);
     }
 
     /**
@@ -34,6 +36,9 @@ class ArticlesView
      */
     public function renderSingleArticle(Article $singleArticle): string
     {
-        return $this->twig->render('article.twig', ['singleArticle' => $singleArticle]);
+        return $this->twig->render('article.twig', [
+            'singleArticle' => $singleArticle]);
     }
+
+
 }
